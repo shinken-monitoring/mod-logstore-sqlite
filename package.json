@@ -1,21 +1,22 @@
 {
-  "name": "ip-tag",
+  "name": "logstore-sqlite",
   "types": ["module"],
   "version": "1.4",
-  "homepage": "http://github.com/shinken-monitoring/mod-ip-tag",
+  "homepage": "http://github.com/shinken-monitoring/mod-logstore-sqlite",
   "author": "Jean Gabès",
-  "description": "Tag host by their IP ranges",
+  "description": "Sqlite backend for logstore",
   "contributors": [
     {
       "name": "Jean Gabès",
       "email": "naparuba@gmail.com"
     }
   ],
-  "repository": "https://github.com/shinken-monitoring/mod-ip-tag",
+  "repository": "https://github.com/shinken-monitoring/mod-logstore-sqlite",
   "keywords": [
     "module",
-    "arbiter",
-    "ip"
+    "livestatus",
+    "broker",
+    "logs"
   ],
   "dependencies": {
     "shinken": ">=1.4"
