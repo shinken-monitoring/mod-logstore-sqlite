@@ -25,7 +25,7 @@
 # This file is used to test host- and service-downtimes.
 #
 
-from shinken_test import *
+from shinken_modules import *
 import os
 import sys
 import re
@@ -47,7 +47,7 @@ LiveStatus = livestatus_broker.LiveStatus
 LiveStatusRegenerator = livestatus_broker.LiveStatusRegenerator
 LiveStatusQueryCache = livestatus_broker.LiveStatusQueryCache
 Logline = livestatus_broker.Logline
-LiveStatusLogStoreSqlite = modulesctx.get_module('logstore_sqlite').LiveStatusLogStoreSqlite
+LiveStatusLogStoreSqlite = modulesctx.get_module('logstore-sqlite').LiveStatusLogStoreSqlite
 #from shinken.modules.logstore_sqlite.module import LiveStatusLogStoreSqlite
 #from shinken.modules.livestatus import module as livestatus_broker
 #from shinken.modules.livestatus.module import LiveStatus_broker
@@ -61,7 +61,7 @@ from shinken.comment import Comment
 sys.setcheckinterval(10000)
 
 
-class TestConfig(ShinkenTest):
+class TestConfig(ShinkenModulesTest):
     def contains_line(self, text, pattern):
         regex = re.compile(pattern)
         for line in text.splitlines():
