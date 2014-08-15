@@ -1,7 +1,7 @@
 {
   "name": "logstore-sqlite",
   "types": ["module"],
-  "version": "1.4",
+  "version": "1.4.1",
   "homepage": "http://github.com/shinken-monitoring/mod-logstore-sqlite",
   "author": "Jean Gabès",
   "description": "Sqlite backend for logstore",
