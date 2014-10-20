@@ -8,17 +8,21 @@ echo $(python -c 'import json; print json.load(open("'$1'package.json"))["name"]
 setup_submodule (){
     for dep in $(cat test/dep_modules.txt); do
         mname=$(basename $dep | sed 's/.git//g')
+        echo "Cloning $dep into $mname .."
         git clone $dep ~/$mname
         rmname=$(get_name ~/$mname/)
         cp -r  ~/$mname/module ~/shinken/modules/$rmname
         [ -f ~/$mname/requirements.txt ] && pip install -r ~/$mname/requirements.txt
     done
+    # we need the livestatus test files to be in shinken test dir:
+    cp -r ~/mod-livestatus/test/* ~/shinken/test/
 }
 
 name=$(get_name)
 
 pip install pycurl
 pip install coveralls
+pip install importlib # this is a requirement of shinken itself
 git clone https://github.com/naparuba/shinken.git ~/shinken
 [ -f test/dep_modules.txt ] && setup_submodule
 [ -f requirements.txt ] && pip install -r requirements.txt
