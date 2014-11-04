@@ -25,22 +25,30 @@
 # This file is used to test host- and service-downtimes.
 #
 
-from shinken_modules import *
 import os
 import sys
 import re
-import subprocess
+import datetime
 import shutil
 import time
 import random
 import copy
+import unittest
 
-sys.path.append('../shinken/modules')
 
-from shinken.brok import Brok
-from shinken.objects.timeperiod import Timeperiod
+from shinken_modules import ShinkenModulesTest
+from shinken_test import time_hacker
+
+
 from shinken.objects.module import Module
 from shinken.objects.service import Service
+from shinken.modulesctx import modulesctx
+from shinken.comment import Comment
+from shinken.log import logger
+from shinken.modulesmanager import ModulesManager
+from shinken.misc.datamanager import datamgr
+
+
 livestatus_broker = modulesctx.get_module('livestatus')
 LiveStatus_broker = livestatus_broker.LiveStatus_broker
 LiveStatus = livestatus_broker.LiveStatus
@@ -48,19 +56,15 @@ LiveStatusRegenerator = livestatus_broker.LiveStatusRegenerator
 LiveStatusQueryCache = livestatus_broker.LiveStatusQueryCache
 Logline = livestatus_broker.Logline
 LiveStatusLogStoreSqlite = modulesctx.get_module('logstore-sqlite').LiveStatusLogStoreSqlite
-#from shinken.modules.logstore_sqlite.module import LiveStatusLogStoreSqlite
-#from shinken.modules.livestatus import module as livestatus_broker
-#from shinken.modules.livestatus.module import LiveStatus_broker
-#from shinken.modules.livestatus.livestatus import LiveStatus
-#from shinken.modules.livestatus.livestatus_regenerator import LiveStatusRegenerator
-#from shinken.modules.livestatus.livestatus_query_cache import LiveStatusQueryCache
-#from shinken.modules.livestatus.mapping import Logline
 
-from shinken.comment import Comment
+
+from mock_livestatus import mock_livestatus_handle_request
+
 
 sys.setcheckinterval(10000)
 
 
+@mock_livestatus_handle_request
 class TestConfig(ShinkenModulesTest):
     def contains_line(self, text, pattern):
         regex = re.compile(pattern)
@@ -104,6 +108,7 @@ class TestConfig(ShinkenModulesTest):
         self.livestatus_broker = None
 
 
+@mock_livestatus_handle_request
 class TestConfigSmall(TestConfig):
     def setUp(self):
         self.setup_with_file('etc/shinken_1r_1h_1s.cfg')
@@ -122,6 +127,15 @@ class TestConfigSmall(TestConfig):
         # but still get DOWN state
         host = self.sched.hosts.find_by_name("test_host_0")
         host.__class__.use_aggressive_host_checking = 1
+        #
+        for file in os.listdir('tmp'):
+            if os.path.isfile(file):
+                os.remove(os.path.join('tmp', file))
+        if os.path.exists("tmp/archives"):
+            for db in os.listdir("tmp/archives"):
+                print "cleanup", db
+                os.remove(os.path.join("tmp/archives", db))
+
 
 
     def write_logs(self, host, loops=0):
@@ -322,17 +336,19 @@ Columns: time type options state host_name"""
         print "Raw pyresponse", pyresponse
         print "pyresponse", len(pyresponse)
         print "expect", logs
-        self.assert_(len(pyresponse) == logs)
+        self.assertEqual(logs, len(pyresponse))
 
         self.livestatus_broker.db.log_db_do_archive()
         self.assert_(os.path.exists("tmp/archives"))
-        self.assert_(len([d for d in os.listdir("tmp/archives") if not d.endswith("journal")]) == 4)
+        tempres = [d for d in os.listdir("tmp/archives") if not d.endswith("journal")]
+        self.assertEqual(4, len(tempres))
         lengths = []
-        for db in sorted([d for d in os.listdir("tmp/archives") if not d.endswith("journal")]):
+        for db in sorted(tempres):
             dbmodconf = Module({'module_name': 'LogStore',
                 'module_type': 'logstore_sqlite',
                 'use_aggressive_sql': '0',
                 'database_file': "tmp/archives/" + db,
+                'archive_path': "tmp/archives/",
                 'max_logs_age': '0',
             })
             tmpconn = LiveStatusLogStoreSqlite(dbmodconf)
@@ -342,7 +358,7 @@ Columns: time type options state host_name"""
             print "db entries", db, numlogs
             tmpconn.close()
         print "lengths is", lengths
-        self.assert_(lengths == [6, 14, 22, 30])
+        self.assertEqual([6, 14, 22, 30], lengths)
 
         request = """GET log
 Filter: time >= """ + str(int(back4days_morning)) + """
@@ -352,7 +368,7 @@ Columns: time type options state host_name"""
         response, keepalive = self.livestatus_broker.livestatus.handle_request(request)
         print response
         pyresponse = eval(response)
-        self.assert_(len(pyresponse) == 30)
+        self.assertEqual(30, len(pyresponse))
         print "pyresponse", len(pyresponse)
         print "expect", logs
 
@@ -366,7 +382,7 @@ Columns: time type options state host_name"""
         response, keepalive = self.livestatus_broker.livestatus.handle_request(request)
         print response
         pyresponse = eval(response)
-        self.assert_(len(pyresponse) == 30)
+        self.assertEqual(30, len(pyresponse))
         print "pyresponse", len(pyresponse)
         print "expect", logs
 
@@ -380,7 +396,7 @@ Columns: time type options state host_name"""
         response, keepalive = self.livestatus_broker.livestatus.handle_request(request)
         print response
         pyresponse = eval(response)
-        self.assert_(len(pyresponse) == 24)
+        self.assertEqual(24, len(pyresponse))
         print "pyresponse", len(pyresponse)
         print "expect", logs
 
@@ -456,31 +472,8 @@ Columns: time type options state host_name"""
             print "db entries", db, numlogs
             tmpconn.close()
         print "lengths is", lengths
-        self.assert_(lengths == [12, 28, 44, 60])
+        self.assertEqual([12, 28, 44, 60], lengths)
 
-    def xtest_david_database(self):
-        #os.removedirs("var/archives")
-        self.print_header()
-        lengths = []
-        dbh = LiveStatusDb("tmp/livestatus.db", "tmp/archives", 3600)
-        numlogs = dbh.execute("SELECT COUNT(*) FROM logs")
-        lengths.append(numlogs[0][0])
-        print "db main entries", numlogs
-        dbh.close()
-        start = time.time()
-        os.system("date")
-        dbh = LiveStatusDb("tmp/livestatus.db", "tmp/archives", 3600)
-        dbh.log_db_do_archive()
-        dbh.close()
-        os.system("date")
-        stop = time.time()
-        for db in sorted(os.listdir("tmp/archives")):
-            dbh = LiveStatusDb("tmp/archives/" + db, "tmp", 3600)
-            numlogs = dbh.execute("SELECT COUNT(*) FROM logs")
-            lengths.append(numlogs[0][0])
-            print "db entries", db, numlogs
-            dbh.close()
-        print "lengths is", lengths
 
     def test_archives_path(self):
         #os.removedirs("var/archives")
@@ -552,6 +545,7 @@ ResponseHeader: fixed16
         self.assert_(len(pyresponse) == 2)
 
 
+@mock_livestatus_handle_request
 class TestConfigBig(TestConfig):
 
     def setUp(self):
@@ -727,7 +721,7 @@ OutputFormat: json"""
         tac = time.time()
         pyresponse = eval(response)
         print "number of records with test_ok_01", len(pyresponse)
-        self.assert_(len(pyresponse) == should_be)
+        self.assertEqual(should_be, len(pyresponse))
 
         # and now test Negate:
         request = """GET log
@@ -780,7 +774,7 @@ OutputFormat: json"""
         time_hacker.set_my_time()
 
 
-
+@mock_livestatus_handle_request
 class TestConfigNoLogstore(TestConfig):
 
     def setUp(self):

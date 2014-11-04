@@ -4,9 +4,14 @@ python:
   - "2.6"
 
 install:
-  - "[ -d test ] && ./test/setup_module_test.sh || : "
+  - ./test/setup_module_test.sh
+  - pip install importlib # this is a requirement of shinken
 
-script: "[ -d test ] && cd ~/shinken/test && nosetests -vx --with-coverage --cover-package=module || :"
+script:
+  - cd ~/shinken/test
+  - export PYTHONPATH=$PYTHONPATH:~/shinken # we need shinken..
+  - export PYTHONPATH=$PYTHONPATH:~/mod-livestatus/test # we also need mock_livestatus from mod-livestatus..
+  - nosetests -vx --with-coverage --cover-package=module
 
 after_success:
   coveralls
