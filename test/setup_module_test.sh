@@ -26,6 +26,7 @@ pip install importlib # this is a requirement of shinken itself
 git clone https://github.com/naparuba/shinken.git ~/shinken
 [ -f test/dep_modules.txt ] && setup_submodule
 [ -f requirements.txt ] && pip install -r requirements.txt
+[ -f test/requirements.txt ] && pip install -r test/requirements.txt
 rm ~/shinken/test/test_*.py
 cp test/test_*.py ~/shinken/test/
 [ -d test/etc ] && cp -r test/etc ~/shinken/test/

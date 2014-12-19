@@ -33,11 +33,10 @@ import shutil
 import time
 import random
 import copy
-import unittest
 
 
 from shinken_modules import ShinkenModulesTest
-from shinken_test import time_hacker
+from shinken_test import time_hacker, unittest
 
 
 from shinken.objects.module import Module
