@@ -107,7 +107,7 @@ class LiveStatusLogStoreSqlite(BaseModule):
         self.archive_path = getattr(modconf, 'archive_path', os.path.join(os.path.dirname(self.database_file), 'archives'))
         try:
             os.stat(self.archive_path)
-        except:
+        except Exception:
             os.mkdir(self.archive_path)
         max_logs_age = getattr(modconf, 'max_logs_age', '365')
         maxmatch = re.match(r'^(\d+)([dwmy]*)$', max_logs_age)
@@ -179,7 +179,7 @@ class LiveStatusLogStoreSqlite(BaseModule):
             # want to leave empty directories around.
             try:
                 os.removedirs(self.archive_path)
-            except:
+            except Exception as err:
                 pass
 
     def prepare_log_db_table(self, table_name='logs'):
