@@ -101,7 +101,7 @@ class LiveStatusLogStoreSqlite(BaseModule):
         BaseModule.__init__(self, modconf)
         self.plugins = []
         # Change. The var folder is not defined based upon '.', but upon ../var from the process name (shinken-broker)
-        # When the database_file variable, the default variable was calculated from '.'... Depending on where you were 
+        # When the database_file variable, the default variable was calculated from '.'... Depending on where you were
         # when you ran the command the behavior changed.
         self.database_file = getattr(modconf, 'database_file', os.path.join(os.path.abspath('.'), 'livestatus.db'))
         self.archive_path = getattr(modconf, 'archive_path', os.path.join(os.path.dirname(self.database_file), 'archives'))
@@ -128,6 +128,7 @@ class LiveStatusLogStoreSqlite(BaseModule):
                 self.max_logs_age = int(maxmatch.group(1)) * 365
         self.use_aggressive_sql = (getattr(modconf, 'use_aggressive_sql', '0') == '1')
         self.read_only = (getattr(modconf, 'read_only', '0') == '1')
+        self.journal_mode = getattr(modconf, 'journal_mode', 'truncate')
 
         # This stack is used to create a full-blown select-statement
         self.sql_filter_stack = LiveStatusSqlStack()
@@ -210,7 +211,7 @@ class LiveStatusLogStoreSqlite(BaseModule):
 
         self.execute("CREATE INDEX IF NOT EXISTS logs_time ON %s (time)" % table_name)
         self.execute("CREATE INDEX IF NOT EXISTS logs_host_name ON %s (host_name)" % table_name)
-        self.execute("PRAGMA journal_mode=truncate")
+        self.execute("PRAGMA journal_mode={}".format(self.journal_mode))
         self.commit()
 
     def commit_and_rotate_log_db(self):
@@ -486,7 +487,7 @@ class LiveStatusLogStoreSqlite(BaseModule):
         if re.match("^\[[0-9]*\] [A-Z][a-z]*.:", line):
             # Match log which NOT have to be stored
             # print "Unexpected in manage_log_brok", line
-            return 
+            return
         try:
             logline = Logline(line=line)
             values = logline.as_tuple()
