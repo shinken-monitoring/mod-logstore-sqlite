@@ -130,12 +130,6 @@ class LiveStatusLogStoreSqlite(BaseModule):
         self.read_only = (getattr(modconf, 'read_only', '0') == '1')
         self.journal_mode = getattr(modconf, 'journal_mode', 'truncate')
 
-        # This stack is used to create a full-blown select-statement
-        self.sql_filter_stack = LiveStatusSqlStack()
-        # This stack is used to create a minimal select-statement which
-        # selects only by time >= and time <=
-        self.sql_time_filter_stack = LiveStatusSqlStack()
-
         # Now sleep one second, so that won't get lineno collisions with the last second
         time.sleep(1)
         Logline.lineno = 0
@@ -159,6 +153,12 @@ class LiveStatusLogStoreSqlite(BaseModule):
         # Get no problem for utf8 insert
         self.dbconn.text_factory = str
         self.dbcursor = self.make_cursor()
+
+        # This stack is used to create a full-blown select-statement
+        self.sql_filter_stack = LiveStatusSqlStack()
+        # This stack is used to create a minimal select-statement which
+        # selects only by time >= and time <=
+        self.sql_time_filter_stack = LiveStatusSqlStack()
 
         #self.execute("PRAGMA cache_size = 200000")
 
